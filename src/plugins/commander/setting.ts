@@ -9,6 +9,17 @@ const handleConfig = async (ctx: IPicGo, prompts: IPluginConfig[], module: strin
   ctx.saveConfig({
     [configName]: answer
   })
+  // auto set current uploader or transformer
+  if (module === 'uploader') {
+    ctx.saveConfig({
+      'picBed.current': name,
+      'picBed.uploader': name
+    })
+  } else if (module === 'transformer') {
+    ctx.saveConfig({
+      'picBed.transformer': name
+    })
+  }
 }
 
 const setting = {
@@ -42,8 +53,8 @@ const setting = {
                       type: 'list',
                       name: `${module}`,
                       choices: ctx.helper[module].getIdList(),
-                      message: `Choose a(n) ${module}`,
-                      default: ctx.getConfig('picBed.uploader') || ctx.getConfig('picBed.current')
+                      message: `Choose a(n) ${module}`
+                      // default: ctx.getConfig('picBed.uploader') || ctx.getConfig('picBed.current')
                     }
                   ]
                   const answer = await ctx.cmd.inquirer.prompt<IStringKeyMap<any>>(prompts)
@@ -85,6 +96,9 @@ const setting = {
                 return ctx.log.warn('Available modules are uploader|transformer|plugin')
             }
             ctx.log.success('Configure config successfully!')
+            if (module === 'plugin') {
+              ctx.log.info('If you want to use this config, please run \'picgo use plugins\'')
+            }
           } catch (e: any) {
             ctx.log.error(e)
             if (process.argv.includes('--debug')) {

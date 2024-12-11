@@ -8,7 +8,7 @@
         "typescriptreact"
     ],
     "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true
+        "source.fixAll.eslint": "explicit"
     },
     "eslint.enable": true,
     "eslint.alwaysShowStatus": true,
@@ -29,5 +29,5 @@
         "upyun",
         "weibo"
     ],
-    "typescript.tsdk": "node_modules\\typescript\\lib"
+    "typescript.tsdk": "node_modules/typescript/lib"
 }

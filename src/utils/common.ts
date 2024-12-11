@@ -1,5 +1,3 @@
-import request from 'request'
-import requestPromise from 'request-promise-native'
 import fs from 'fs-extra'
 import path from 'path'
 import { imageSize } from 'image-size'
@@ -7,7 +5,8 @@ import {
   IImgSize,
   IPathTransformedImgInfo,
   IPluginNameType,
-  ILogger
+  ILogger,
+  IPicGo
 } from '../types'
 import { URL } from 'url'
 
@@ -15,10 +14,11 @@ export const isUrl = (url: string): boolean => (url.startsWith('http://') || url
 export const isUrlEncode = (url: string): boolean => {
   url = url || ''
   try {
+    // the whole url encode or decode shold not use encodeURIComponent or decodeURIComponent
     return url !== decodeURI(url)
   } catch (e) {
     // if some error caught, try to let it go
-    return true
+    return false
   }
 }
 export const handleUrlEncode = (url: string): string => {
@@ -30,18 +30,21 @@ export const handleUrlEncode = (url: string): string => {
 
 export const getImageSize = (file: Buffer): IImgSize => {
   try {
-    const { width = 0, height = 0 } = imageSize(file)
+    const { width = 0, height = 0, type } = imageSize(file)
+    const extname = type ? `.${type}` : '.png'
     return {
       real: true,
       width,
-      height
+      height,
+      extname
     }
   } catch (e) {
     // fallback to 200 * 200
     return {
       real: false,
       width: 200,
-      height: 200
+      height: 200,
+      extname: '.png'
     }
   }
 }
@@ -62,29 +65,31 @@ export const getFSFile = async (filePath: string): Promise<IPathTransformedImgIn
   }
 }
 
-export const getURLFile = async (url: string): Promise<IPathTransformedImgInfo> => {
-  const requestOptions = {
-    method: 'GET',
-    url: handleUrlEncode(url),
-    encoding: null
-  }
+export const getURLFile = async (url: string, ctx: IPicGo): Promise<IPathTransformedImgInfo> => {
+  url = handleUrlEncode(url)
   let isImage = false
   let extname = ''
   let timeoutId: NodeJS.Timeout
   const requestFn = new Promise<IPathTransformedImgInfo>((resolve, reject) => {
     (async () => {
       try {
-        const res = await requestPromise(requestOptions)
-          .on('response', (response: request.Response): void => {
-            const contentType = response.headers['content-type']
+        const res = await ctx.request({
+          method: 'get',
+          url,
+          resolveWithFullResponse: true,
+          responseType: 'arraybuffer'
+        })
+          .then((resp) => {
+            const contentType = resp.headers['content-type']
             if (contentType?.includes('image')) {
               isImage = true
               extname = `.${contentType.split('image/')[1]}`
             }
+            return resp.data as Buffer
           })
         clearTimeout(timeoutId)
         if (isImage) {
-          const urlPath = new URL(requestOptions.url).pathname
+          const urlPath = new URL(url).pathname
           resolve({
             buffer: res,
             fileName: path.basename(urlPath),
@@ -97,11 +102,12 @@ export const getURLFile = async (url: string): Promise<IPathTransformedImgInfo> 
             reason: `${url} is not image`
           })
         }
-      } catch {
+      } catch (error: any) {
         clearTimeout(timeoutId)
         resolve({
           success: false,
-          reason: `request ${url} error`
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+          reason: `request ${url} error, ${error?.message ?? ''}`
         })
       }
     })().catch(reject)
@@ -341,6 +347,14 @@ export const isInputConfigValid = (config: any): boolean => {
   return false
 }
 
+export function safeParse<T> (str: string): T | string {
+  try {
+    return JSON.parse(str)
+  } catch (error) {
+    return str
+  }
+}
+
 // hold...
 // export const configWhiteList: RegExp[] = [
 //   /^picBed/,
@@ -355,3 +369,15 @@ export const isInputConfigValid = (config: any): boolean => {
 // export const isConfigKeyInWhiteList = (key: string): boolean => {
 //   return configWhiteList.some(whiteItem => whiteItem.test(key))
 // }
+
+export const forceNumber = (num: string | number = 0): number => {
+  return isNaN(Number(num)) ? 0 : Number(num)
+}
+
+export const isDev = (): boolean => {
+  return process.env.NODE_ENV === 'development'
+}
+
+export const isProd = (): boolean => {
+  return process.env.NODE_ENV === 'production'
+}

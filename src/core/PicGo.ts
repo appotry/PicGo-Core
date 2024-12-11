@@ -10,15 +10,15 @@ import uploaders from '../plugins/uploader'
 import transformers from '../plugins/transformer'
 import PluginLoader from '../lib/PluginLoader'
 import { get, set, unset } from 'lodash'
-import { IHelper, IImgInfo, IConfig, IPicGo, IStringKeyMap, IPluginLoader } from '../types'
+import { IHelper, IImgInfo, IConfig, IPicGo, IStringKeyMap, IPluginLoader, II18nManager, IPicGoPlugin, IPicGoPluginInterface, IRequest } from '../types'
 import getClipboardImage from '../utils/getClipboardImage'
 import Request from '../lib/Request'
 import DB from '../utils/db'
 import PluginHandler from '../lib/PluginHandler'
 import { IBuildInEvent, IBusEvent } from '../utils/enum'
 import { eventBus } from '../utils/eventBus'
-import { RequestPromiseAPI } from 'request-promise-native'
 import { isConfigKeyInBlackList, isInputConfigValid } from '../utils/common'
+import { I18nManager } from '../i18n'
 
 export class PicGo extends EventEmitter implements IPicGo {
   private _config!: IConfig
@@ -39,6 +39,7 @@ export class PicGo extends EventEmitter implements IPicGo {
    * use request instead
    */
   Request!: Request
+  i18n!: II18nManager
   VERSION: string = process.env.PICGO_VERSION
   GUI_VERSION?: string
 
@@ -83,11 +84,13 @@ export class PicGo extends EventEmitter implements IPicGo {
 
   private initConfig (): void {
     this.db = new DB(this)
-    this._config = this.db.read().value()
+    this._config = this.db.read(true) as IConfig
   }
 
   private init (): void {
     try {
+      // init 18n at first
+      this.i18n = new I18nManager(this)
       this.Request = new Request(this)
       this._pluginLoader = new PluginLoader(this)
       // load self plugins
@@ -105,6 +108,21 @@ export class PicGo extends EventEmitter implements IPicGo {
     }
   }
 
+  /**
+   * easily mannually load a plugin
+   * if provide plugin name, will register plugin by name
+   * or just instantiate a plugin
+   */
+  use (plugin: IPicGoPlugin, name?: string): IPicGoPluginInterface {
+    if (name) {
+      this.pluginLoader.registerPlugin(name, plugin)
+      return this.pluginLoader.getPlugin(name)!
+    } else {
+      const pluginInstance = plugin(this)
+      return pluginInstance
+    }
+  }
+
   registerCommands (): void {
     if (this.configPath !== '') {
       this.cmd.init()
@@ -114,7 +132,6 @@ export class PicGo extends EventEmitter implements IPicGo {
 
   getConfig<T> (name?: string): T {
     if (!name) {
-      console.log(this._config)
       return this._config as unknown as T
     } else {
       return get(this._config, name)
@@ -168,9 +185,8 @@ export class PicGo extends EventEmitter implements IPicGo {
     unset(this.getConfig(key), propName)
   }
 
-  get request (): RequestPromiseAPI {
-    // TODO: replace request with got: https://github.com/sindresorhus/got
-    return this.Request.request
+  get request (): IRequest['request'] {
+    return this.Request.request.bind(this.Request)
   }
 
   async upload (input?: any[]): Promise<IImgInfo[] | Error> {

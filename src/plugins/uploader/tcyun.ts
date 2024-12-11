@@ -1,8 +1,8 @@
 import crypto from 'crypto'
 import mime from 'mime-types'
-import { IPicGo, IPluginConfig, ITcyunConfig } from '../../types'
-import { Options } from 'request-promise-native'
+import { IPicGo, IPluginConfig, ITcyunConfig, IOldReqOptionsWithFullResponse } from '../../types'
 import { IBuildInEvent } from '../../utils/enum'
+import { ILocalesKey } from '../../i18n/zh-CN'
 
 // generate COS signature string
 
@@ -36,7 +36,8 @@ const generateSignature = (options: ITcyunConfig, fileName: string): ISignature 
     const tomorrow = today + 86400
     signTime = `${today};${tomorrow}`
     const signKey = crypto.createHmac('sha1', secretKey).update(signTime).digest('hex')
-    const httpString = `put\n/${options.path}${fileName}\n\nhost=${options.bucket}.cos.${options.area}.myqcloud.com\n`
+    const endpoint = options.endpoint ? options.endpoint : `cos.${options.area}.myqcloud.com`
+    const httpString = `put\n/${options.path}${fileName}\n\nhost=${options.bucket}.${endpoint}\n`
     const sha1edHttpString = crypto.createHash('sha1').update(httpString).digest('hex')
     const stringToSign = `sha1\n${signTime}\n${sha1edHttpString}\n`
     signature = crypto.createHmac('sha1', signKey).update(stringToSign).digest('hex')
@@ -49,7 +50,7 @@ const generateSignature = (options: ITcyunConfig, fileName: string): ISignature 
   }
 }
 
-const postOptions = (options: ITcyunConfig, fileName: string, signature: ISignature, image: Buffer): Options => {
+const postOptions = (options: ITcyunConfig, fileName: string, signature: ISignature, image: Buffer, version: string): IOldReqOptionsWithFullResponse => {
   const area = options.area
   const path = options.path
   if (!options.version || options.version === 'v4') {
@@ -59,21 +60,27 @@ const postOptions = (options: ITcyunConfig, fileName: string, signature: ISignat
       headers: {
         Host: `${area}.file.myqcloud.com`,
         Authorization: signature.signature,
-        contentType: 'multipart/form-data'
+        contentType: 'multipart/form-data',
+        'User-Agent': `PicGo;${version};null;null`
       },
       formData: {
         op: 'upload',
         filecontent: image
-      }
+      },
+      resolveWithFullResponse: true
     }
   } else {
+    // https://cloud.tencent.com/document/product/436/10976
+    const endpoint = options.endpoint ? options.endpoint : `cos.${options.area}.myqcloud.com`
+
     return {
       method: 'PUT',
-      url: `http://${options.bucket}.cos.${options.area}.myqcloud.com/${encodeURI(path)}${encodeURI(fileName)}`,
+      url: `http://${options.bucket}.${endpoint}/${encodeURI(path)}${encodeURIComponent(fileName)}`,
       headers: {
-        Host: `${options.bucket}.cos.${options.area}.myqcloud.com`,
+        Host: `${options.bucket}.${endpoint}`,
         Authorization: `q-sign-algorithm=sha1&q-ak=${options.secretId}&q-sign-time=${signature.signTime}&q-key-time=${signature.signTime}&q-header-list=host&q-url-param-list=&q-signature=${signature.signature}`,
-        contentType: mime.lookup(fileName)
+        contentType: mime.lookup(fileName),
+        'User-Agent': `PicGo;${version};null;null`
       },
       body: image,
       resolveWithFullResponse: true
@@ -101,15 +108,15 @@ const handle = async (ctx: IPicGo): Promise<IPicGo | boolean> => {
         if (!image && img.base64Image) {
           image = Buffer.from(img.base64Image, 'base64')
         }
-        const options = postOptions(tcYunOptions, img.fileName, signature, image)
-        const res = await ctx.Request.request(options)
+        const options = postOptions(tcYunOptions, img.fileName, signature, image, ctx.GUI_VERSION || ctx.VERSION)
+        const res = await ctx.request(options)
           .then((res: any) => res)
           .catch((err: Error) => {
-            ctx.log.error(err)
             return {
               statusCode: 400,
               body: {
-                msg: '认证失败！'
+                msg: ctx.i18n.translate<ILocalesKey>('AUTH_FAILED'),
+                err
               }
             }
           })
@@ -120,26 +127,40 @@ const handle = async (ctx: IPicGo): Promise<IPicGo | boolean> => {
           body = res
         }
         if (body.statusCode === 400) {
-          throw new Error(body.msg || body.message)
+          if (body?.body?.err) {
+            throw body.body.err
+          } else {
+            throw new Error(body?.body?.msg || body?.body?.message)
+          }
         }
+        const optionUrl = tcYunOptions.options || ''
+        const slim = tcYunOptions.slim || ''
         if (useV4 && body.message === 'SUCCESS') {
           delete img.base64Image
           delete img.buffer
           if (customUrl) {
             img.imgUrl = `${customUrl}/${path}${img.fileName}`
           } else {
-            img.imgUrl = body.data.source_url
+            img.imgUrl = `${body.data.source_url as string}${optionUrl}`
           }
         } else if (!useV4 && body && body.statusCode === 200) {
           delete img.base64Image
           delete img.buffer
           if (customUrl) {
-            img.imgUrl = `${customUrl}/${path}${img.fileName}`
+            img.imgUrl = `${customUrl}/${encodeURI(path)}${encodeURIComponent(img.fileName)}${optionUrl}`
           } else {
-            img.imgUrl = `https://${tcYunOptions.bucket}.cos.${tcYunOptions.area}.myqcloud.com/${path}${img.fileName}`
+            const endpoint = tcYunOptions.endpoint ? tcYunOptions.endpoint : `cos.${tcYunOptions.area}.myqcloud.com`
+            img.imgUrl = `https://${tcYunOptions.bucket}.${endpoint}/${encodeURI(path)}${encodeURIComponent(img.fileName)}${optionUrl}`
           }
         } else {
           throw new Error(res.body.msg)
+        }
+        if (slim) {
+          if (optionUrl) {
+            img.imgUrl += '&imageSlim'
+          } else {
+            img.imgUrl += '?imageSlim'
+          }
         }
       }
     }
@@ -149,8 +170,10 @@ const handle = async (ctx: IPicGo): Promise<IPicGo | boolean> => {
       try {
         const body = JSON.parse(err.error)
         ctx.emit(IBuildInEvent.NOTIFICATION, {
-          title: '上传失败',
-          body: `错误码：${body.code as string}，请打开浏览器粘贴地址查看相关原因`,
+          title: ctx.i18n.translate<ILocalesKey>('UPLOAD_FAILED'),
+          body: ctx.i18n.translate<ILocalesKey>('UPLOAD_FAILED_REASON', {
+            code: body.code as string
+          }),
           text: 'https://cloud.tencent.com/document/product/436/8432'
         })
       } catch (e) {}
@@ -161,62 +184,109 @@ const handle = async (ctx: IPicGo): Promise<IPicGo | boolean> => {
 
 const config = (ctx: IPicGo): IPluginConfig[] => {
   const userConfig = ctx.getConfig<ITcyunConfig>('picBed.tcyun') || {}
-  const config = [
+  const config: IPluginConfig[] = [
+    {
+      name: 'version',
+      type: 'list',
+      alias: ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_VERSION'),
+      choices: ['v4', 'v5'],
+      default: 'v5',
+      required: false
+    },
     {
       name: 'secretId',
       type: 'input',
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_SECRETID') },
       default: userConfig.secretId || '',
       required: true
     },
     {
       name: 'secretKey',
-      type: 'input',
+      type: 'password',
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_SECRETKEY') },
       default: userConfig.secretKey || '',
       required: true
     },
     {
       name: 'bucket',
       type: 'input',
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_BUCKET') },
       default: userConfig.bucket || '',
       required: true
     },
     {
       name: 'appId',
       type: 'input',
+      get prefix () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_APPID') },
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_APPID') },
       default: userConfig.appId || '',
+      get message () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_MESSAGE_APPID') },
       required: true
     },
     {
       name: 'area',
       type: 'input',
+      get prefix () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_AREA') },
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_AREA') },
       default: userConfig.area || '',
+      get message () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_MESSAGE_AREA') },
       required: true
+    },
+    {
+      name: 'endpoint',
+      type: 'input',
+      get prefix () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_ENDPOINT') },
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_ENDPOINT') },
+      default: userConfig.endpoint || '',
+      get message () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_MESSAGE_ENDPOINT') },
+      required: false
     },
     {
       name: 'path',
       type: 'input',
+      get prefix () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_PATH') },
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_PATH') },
       default: userConfig.path || '',
+      get message () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_MESSAGE_PATH') },
       required: false
     },
     {
       name: 'customUrl',
       type: 'input',
+      get prefix () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_CUSTOMURL') },
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_CUSTOMURL') },
       default: userConfig.customUrl || '',
+      get message () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_MESSAGE_CUSTOMURL') },
       required: false
     },
     {
-      name: 'version',
-      type: 'list',
-      choices: ['v4', 'v5'],
-      default: 'v5',
+      name: 'options',
+      type: 'input',
+      default: userConfig.options || '',
+      get prefix () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_OPTIONS') },
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_OPTIONS') },
+      get message () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_MESSAGE_OPTIONS') },
       required: false
+    },
+    {
+      name: 'slim',
+      type: 'confirm',
+      default: userConfig.options || '',
+      get prefix () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_SLIM') },
+      get alias () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_SLIM') },
+      required: false,
+      get confirmText () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_SLIM_CONFIRM') },
+      get cancelText () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_SLIM_CANCEL') },
+      get tips () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD_SLIM_TIP') }
     }
   ]
   return config
 }
 
-export default {
-  name: '腾讯云COS',
-  handle,
-  config
+export default function register (ctx: IPicGo): void {
+  ctx.helper.uploader.register('tcyun', {
+    get name () { return ctx.i18n.translate<ILocalesKey>('PICBED_TENCENTCLOUD') },
+    handle,
+    config
+  })
 }

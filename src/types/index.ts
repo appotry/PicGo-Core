@@ -1,6 +1,6 @@
-import { RequestPromiseAPI } from 'request-promise-native'
 import { Command } from 'commander'
 import { Inquirer } from 'inquirer'
+import { IRequestPromiseOptions } from './oldRequest'
 
 export interface IPicGo extends NodeJS.EventEmitter {
   /**
@@ -64,7 +64,9 @@ export interface IPicGo extends NodeJS.EventEmitter {
    *
    * http request tool
    */
-  request: RequestPromiseAPI
+  request: IRequest['request']
+
+  i18n: II18nManager
 
   /**
    * get picgo config
@@ -101,6 +103,8 @@ export interface IPluginConfig {
   required: boolean
   default?: any
   alias?: string
+  message?: string
+  prefix?: string // for cli options
   [propName: string]: any
 }
 
@@ -124,12 +128,9 @@ export interface IHelper {
   afterUploadPlugins: ILifecyclePlugins
 }
 
-export interface ICommander {
+export interface ICommander extends ILifecyclePlugins {
   program: Command
   inquirer: Inquirer
-  get: (name: string) => IPlugin
-  getList: () => IPlugin[]
-  register: (name: string, plugin: IPlugin) => void
 }
 
 export interface IPluginLoader {
@@ -158,8 +159,94 @@ export interface IPluginLoader {
   hasPlugin: (name: string) => boolean
 }
 
+export interface IRequestOld {
+  request: import('axios').AxiosInstance
+}
+
+export type IOldReqOptions = Omit<IRequestPromiseOptions & {
+  url: string
+}, 'auth'>
+
+export type IOldReqOptionsWithFullResponse = IOldReqOptions & {
+  resolveWithFullResponse: true
+}
+
+export type IOldReqOptionsWithJSON = IOldReqOptions & {
+  json: true
+}
+
+/**
+ * for PicGo new request api, the response will be json format
+ */
+export type IReqOptions<T = any> = AxiosRequestConfig<T> & {
+  resolveWithFullResponse: true
+}
+
+/**
+ * for PicGo new request api, the response will be Buffer
+ */
+export type IReqOptionsWithArrayBufferRes<T = any> = IReqOptions<T> & {
+  responseType: 'arraybuffer'
+}
+
+/**
+ * for PicGo new request api, the response will be just response data. (not statusCode, headers, etc.)
+ */
+export type IReqOptionsWithBodyResOnly<T = any> = AxiosRequestConfig<T>
+
+export type IFullResponse<T = any, U = any> = AxiosResponse<T, U> & {
+  statusCode: number
+  body: T
+}
+
+type AxiosResponse<T = any, U = any> = import('axios').AxiosResponse<T, U>
+
+type AxiosRequestConfig<T = any> = import('axios').AxiosRequestConfig<T>
+
+interface IRequestOptionsWithFullResponse {
+  resolveWithFullResponse: true
+}
+
+interface IRequestOptionsWithJSON {
+  json: true
+}
+
+interface IRequestOptionsWithResponseTypeArrayBuffer {
+  responseType: 'arraybuffer'
+}
+
+/**
+ * T is the response data type
+ * U is the config type
+ */
+export type IResponse<T, U> = U extends IRequestOptionsWithFullResponse ? IFullResponse<T, U>
+  : U extends IRequestOptionsWithJSON ? T
+    : U extends IRequestOptionsWithResponseTypeArrayBuffer ? Buffer
+      : U extends IOldReqOptionsWithFullResponse ? IFullResponse<T, U>
+        : U extends IOldReqOptionsWithJSON ? T
+          : U extends IOldReqOptions ? string
+            : U extends IReqOptionsWithBodyResOnly ? T
+              : string
+
+/**
+ * the old request lib will be removed in v1.5.0+
+ * the request options have the following properties
+ */
+export interface IRequestLibOnlyOptions {
+  proxy?: string
+  body?: any
+  formData?: { [key: string]: any } | undefined
+  form?: { [key: string]: any } | string | undefined
+}
+
+export type IRequestConfig<T> = T extends IRequestLibOnlyOptions ? IOldReqOptions : AxiosRequestConfig
+
+// export type INewRequest<T = any, U = any> = (config: IRequestConfig<T>) => Promise<IResponse<T, U>>
+
 export interface IRequest {
-  request: RequestPromiseAPI
+  request: <T, U extends (
+    IRequestConfig<U> extends IOldReqOptions ? IOldReqOptions : IRequestConfig<U> extends AxiosRequestConfig ? AxiosRequestConfig : never
+  )>(config: U) => Promise<IResponse<T, U>>
 }
 
 export type ILogColor = 'blue' | 'green' | 'yellow' | 'red'
@@ -193,6 +280,7 @@ export interface ICLIConfigs {
 /** SM.MS 图床配置项 */
 export interface ISmmsConfig {
   token: string
+  backupDomain?: string
 }
 /** 七牛云图床配置项 */
 export interface IQiniuConfig {
@@ -203,7 +291,7 @@ export interface IQiniuConfig {
   /** 自定义域名 */
   url: string
   /** 存储区域编号 */
-  area: 'z0' | 'z1' | 'z2' | 'na0' | 'as0'
+  area: 'z0' | 'z1' | 'z2' | 'na0' | 'as0' | string
   /** 网址后缀，比如使用 `?imageslim` 可进行[图片瘦身](https://developer.qiniu.com/dora/api/1271/image-thin-body-imageslim) */
   options: string
   /** 自定义存储路径，比如 `img/` */
@@ -233,12 +321,18 @@ export interface ITcyunConfig {
   appId: string
   /** 存储区域，例如 ap-beijing-1 */
   area: string
+  /** 请求的 ENDPOINT，设置后 `area` 字段会失效 */
+  endpoint: string
   /** 自定义存储路径，比如 img/ */
   path: string
   /** 自定义域名，注意要加 `http://` 或者 `https://` */
   customUrl: string
   /** COS 版本，v4 或者 v5 */
   version: 'v5' | 'v4'
+  /** 针对图片的一些后缀处理参数 PicGo 2.4.0+ PicGo-Core 1.5.0+ */
+  options: string
+  /** 是否支持极智压缩 */
+  slim: boolean
 }
 /** GitHub 图床配置项 */
 export interface IGithubConfig {
@@ -298,12 +392,12 @@ export interface IConfig {
   debug?: boolean
   silent?: boolean
   settings?: {
-    logLevel?: string
+    logLevel?: string[]
     logPath?: string
     /** for npm */
-    registry?: string
+    npmRegistry?: string
     /** for npm */
-    proxy?: string
+    npmProxy?: string
     [others: string]: any
   }
   [configOptions: string]: any
@@ -347,8 +441,8 @@ export interface IPluginHandlerResult<T> {
 }
 
 export interface IPluginHandlerOptions {
-  proxy?: string
-  registry?: string
+  npmProxy?: string
+  npmRegistry?: string
 }
 
 /**
@@ -417,6 +511,7 @@ export interface IImgSize {
   width: number
   height: number
   real?: boolean
+  extname?: string
 }
 
 /**
@@ -468,9 +563,40 @@ export interface ILogger {
   info: (...msg: ILogArgvType[]) => void
   error: (...msg: ILogArgvTypeWithError[]) => void
   warn: (...msg: ILogArgvType[]) => void
+  debug: (...msg: ILogArgvType[]) => void
 }
 
 export interface IConfigChangePayload<T> {
   configName: string
   value: T
+}
+
+export interface ILocale {
+  [key: string]: any
+}
+
+export interface II18nManager {
+  /**
+   * translate text
+   */
+  translate: <T extends string>(key: T, args?: IStringKeyMap<string>) => string
+  /**
+   * add locale to current i18n language
+   * default locale list
+   * - zh-CN
+   * - en
+   */
+  addLocale: (language: string, locales: ILocale) => boolean
+  /**
+   * set current language
+   */
+  setLanguage: (language: string) => void
+  /**
+   * dynamic add new language & locales
+   */
+  addLanguage: (language: string, locales: ILocale) => boolean
+  /**
+   * get language list
+   */
+  getLanguageList: () => string[]
 }

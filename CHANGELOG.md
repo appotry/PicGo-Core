@@ -1,3 +1,295 @@
+## :tada: 1.5.8 (2024-11-25)
+
+
+### :sparkles: Features
+
+* add millisecond for file name ([6e4c488](https://github.com/PicGo/PicGo-Core/commit/6e4c488))
+
+
+
+## :tada: 1.5.7 (2024-07-16)
+
+
+### :bug: Bug Fixes
+
+* tencent cos url encode bug ([8572c1c](https://github.com/PicGo/PicGo-Core/commit/8572c1c))
+
+
+
+## :tada: 1.5.6 (2023-09-06)
+
+
+### :bug: Bug Fixes
+
+* logLevel bug ([7c24d50](https://github.com/PicGo/PicGo-Core/commit/7c24d50))
+
+
+
+## :tada: 1.5.5 (2023-08-26)
+
+
+### :sparkles: Features
+
+* support buffer image upload ([70f6529](https://github.com/PicGo/PicGo-Core/commit/70f6529))
+* support ENDPOINT for Tencent COS ([#155](https://github.com/PicGo/PicGo-Core/issues/155)) ([42494ac](https://github.com/PicGo/PicGo-Core/commit/42494ac))
+* support upload buffer ([#152](https://github.com/PicGo/PicGo-Core/issues/152)) ([54c05be](https://github.com/PicGo/PicGo-Core/commit/54c05be))
+* **tcyun:** add slim section ([#156](https://github.com/PicGo/PicGo-Core/issues/156)) ([30ee4fc](https://github.com/PicGo/PicGo-Core/commit/30ee4fc))
+
+
+
+## :tada: 1.5.4 (2023-07-08)
+
+
+### :sparkles: Features
+
+* change proxy\registry -> npmProxy ([9bedce3](https://github.com/PicGo/PicGo-Core/commit/9bedce3))
+
+
+
+## :tada: 1.5.3 (2023-05-07)
+
+
+### :sparkles: Features
+
+* update encodeOutputURL behavior ([82347ff](https://github.com/PicGo/PicGo-Core/commit/82347ff))
+
+
+
+## :tada: 1.5.2 (2023-05-07)
+
+
+### :bug: Bug Fixes
+
+* fileName urlencode bug & github duplicate error ([c22492b](https://github.com/PicGo/PicGo-Core/commit/c22492b)), closes [Molunerfinn/PicGo#1105](https://github.com/Molunerfinn/PicGo/issues/1105)
+
+
+
+## :tada: 1.5.1 (2023-04-09)
+
+
+### :sparkles: Features
+
+* add mime-types for some uploaders ([fb59681](https://github.com/PicGo/PicGo-Core/commit/fb59681))
+* add settings.encodeOutputURL options for URL encode ([2b9c791](https://github.com/PicGo/PicGo-Core/commit/2b9c791))
+
+
+### :bug: Bug Fixes
+
+* smms error message is an object ([527d19e](https://github.com/PicGo/PicGo-Core/commit/527d19e))
+* tencent cos UA bug ([cb64d84](https://github.com/PicGo/PicGo-Core/commit/cb64d84))
+
+
+
+# :tada: 1.5.0 (2022-11-13)
+
+
+
+# :tada: 1.5.0-alpha.17 (2022-11-13)
+
+
+### :sparkles: Features
+
+* update picgo.use ([e19bb6e](https://github.com/PicGo/PicGo-Core/commit/e19bb6e))
+
+
+### :bug: Bug Fixes
+
+* some case will cause proxy not work ([6272303](https://github.com/PicGo/PicGo-Core/commit/6272303))
+
+
+
+# :tada: 1.5.0-alpha.16 (2022-11-09)
+
+
+### :bug: Bug Fixes
+
+* upyun url-options is not required ([9736a11](https://github.com/PicGo/PicGo-Core/commit/9736a11))
+
+
+
+# :tada: 1.5.0-alpha.15 (2022-10-24)
+
+
+### :bug: Bug Fixes
+
+* tencent cos url encode bug ([eafb70f](https://github.com/PicGo/PicGo-Core/commit/eafb70f))
+
+
+
+# :tada: 1.5.0-alpha.14 (2022-10-24)
+
+
+### :bug: Bug Fixes
+
+* url encode bug ([4c70e9b](https://github.com/PicGo/PicGo-Core/commit/4c70e9b))
+
+
+
+# :tada: 1.5.0-alpha.13 (2022-10-19)
+
+
+### :bug: Bug Fixes
+
+* type error ([b934e8a](https://github.com/PicGo/PicGo-Core/commit/b934e8a))
+
+
+### :package: Chore
+
+* create oldRequest types ([749359a](https://github.com/PicGo/PicGo-Core/commit/749359a))
+
+
+
+# :tada: 1.5.0-alpha.12 (2022-10-14)
+
+
+### :bug: Bug Fixes
+
+* types bug ([d77e6f3](https://github.com/PicGo/PicGo-Core/commit/d77e6f3))
+
+
+
+# :tada: 1.5.0-alpha.11 (2022-10-13)
+
+
+
+# :tada: 1.5.0-alpha.10 (2022-09-25)
+
+
+### :sparkles: Features
+
+* add zh-TW ([#135](https://github.com/PicGo/PicGo-Core/issues/135)) ([d111d6a](https://github.com/PicGo/PicGo-Core/commit/d111d6a))
+* update linux.sh ([#134](https://github.com/PicGo/PicGo-Core/issues/134)) ([2910c20](https://github.com/PicGo/PicGo-Core/commit/2910c20))
+
+
+### :bug: Bug Fixes
+
+* some texts in zh-TW ([#136](https://github.com/PicGo/PicGo-Core/issues/136)) ([907e6c9](https://github.com/PicGo/PicGo-Core/commit/907e6c9))
+* url image download bug & tencent cos url encode bug ([53d54f8](https://github.com/PicGo/PicGo-Core/commit/53d54f8))
+
+
+
+# :tada: 1.5.0-alpha.9 (2022-09-03)
+
+
+### :sparkles: Features
+
+* finish request -> axios ([b89cf1e](https://github.com/PicGo/PicGo-Core/commit/b89cf1e))
+
+
+### :bug: Bug Fixes
+
+* qiniu error msg can't show ([0e4661b](https://github.com/PicGo/PicGo-Core/commit/0e4661b))
+* sm.ms backupDomain message text ([45424d1](https://github.com/PicGo/PicGo-Core/commit/45424d1))
+* when request-options resolveWithFullResponse is false bug ([eb8217a](https://github.com/PicGo/PicGo-Core/commit/eb8217a))
+
+
+
+# :tada: 1.5.0-alpha.8 (2022-08-27)
+
+
+### :sparkles: Features
+
+* add backupDomain for sm.ms ([c6d54f1](https://github.com/PicGo/PicGo-Core/commit/c6d54f1))
+* add debug logger type ([4342268](https://github.com/PicGo/PicGo-Core/commit/4342268))
+* add picgo.use for easily using plugin ([c0107f1](https://github.com/PicGo/PicGo-Core/commit/c0107f1))
+
+
+### :bug: Bug Fixes
+
+* sometime tencent-cloud error message is empty ([6355e1b](https://github.com/PicGo/PicGo-Core/commit/6355e1b))
+
+
+
+# :tada: 1.5.0-alpha.7 (2022-08-20)
+
+
+### :sparkles: Features
+
+* finish i18n text ([11b3197](https://github.com/PicGo/PicGo-Core/commit/11b3197))
+
+
+### :bug: Bug Fixes
+
+* aliyun content-type -> Content-Type ([a649fcc](https://github.com/PicGo/PicGo-Core/commit/a649fcc))
+
+
+
+# :tada: 1.5.0-alpha.6 (2022-08-17)
+
+
+### :bug: Bug Fixes
+
+* tencent cos upload error ([61df53a](https://github.com/PicGo/PicGo-Core/commit/61df53a))
+
+
+
+# :tada: 1.5.0-alpha.5 (2022-07-31)
+
+
+### :sparkles: Features
+
+* add log file size limit ([158be01](https://github.com/PicGo/PicGo-Core/commit/158be01))
+* change inner db to @picgo/store ([0e90af3](https://github.com/PicGo/PicGo-Core/commit/0e90af3))
+
+
+### :bug: Bug Fixes
+
+* build error ([674a6b5](https://github.com/PicGo/PicGo-Core/commit/674a6b5))
+
+
+
+# :tada: 1.5.0-alpha.4 (2022-05-26)
+
+
+### :sparkles: Features
+
+* add userAgent for tencent cloud COS ([acac59a](https://github.com/PicGo/PicGo-Core/commit/acac59a))
+
+
+
+# :tada: 1.5.0-alpha.3 (2022-04-04)
+
+
+### :bug: Bug Fixes
+
+* picgo-gui clipboard image uploading error ([1302f76](https://github.com/PicGo/PicGo-Core/commit/1302f76))
+
+
+
+# :tada: 1.5.0-alpha.2 (2022-04-03)
+
+
+### :sparkles: Features
+
+* add wayland support for linux ([#119](https://github.com/PicGo/PicGo-Core/issues/119)) ([28905f2](https://github.com/PicGo/PicGo-Core/commit/28905f2))
+
+
+### :bug: Bug Fixes
+
+* qiniu && upyun errors ([587dd3f](https://github.com/PicGo/PicGo-Core/commit/587dd3f))
+
+
+
+# :tada: 1.5.0-alpha.1 (2022-03-08)
+
+
+### :sparkles: Features
+
+* add options for tencent cos ([1fccdcc](https://github.com/PicGo/PicGo-Core/commit/1fccdcc)), closes [#117](https://github.com/PicGo/PicGo-Core/issues/117)
+* **i18n:** add i18n for picgo ([4b93a76](https://github.com/PicGo/PicGo-Core/commit/4b93a76))
+
+
+### :bug: Bug Fixes
+
+* build error in windows ([5616fb9](https://github.com/PicGo/PicGo-Core/commit/5616fb9))
+
+
+### :package: Chore
+
+* add alpha branch for alpha version ([6882022](https://github.com/PicGo/PicGo-Core/commit/6882022)), closes [#106](https://github.com/PicGo/PicGo-Core/issues/106)
+
+
+
 # :tada: 1.5.0-alpha.0 (2021-10-26)
 
 
@@ -337,6 +629,3 @@
 ### :package: Chore
 
 * add picgo bump version ([c312302](https://github.com/PicGo/PicGo-Core/commit/c312302))
-
-
-

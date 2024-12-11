@@ -90,7 +90,7 @@ export class PluginLoader implements IPluginLoader {
         setCurrentPluginName(name)
         const pluginInterface = plugin(this.ctx)
         this.pluginMap.set(name, pluginInterface)
-        plugin(this.ctx).register(this.ctx)
+        pluginInterface.register(this.ctx)
       }
     } catch (e) {
       this.pluginMap.delete(name)
@@ -114,6 +114,7 @@ export class PluginLoader implements IPluginLoader {
     this.ctx.helper.beforeTransformPlugins.unregister(name)
     this.ctx.helper.beforeUploadPlugins.unregister(name)
     this.ctx.helper.afterUploadPlugins.unregister(name)
+    this.ctx.cmd.unregister(name)
     this.ctx.removeConfig('picgoPlugins', name)
   }
 
